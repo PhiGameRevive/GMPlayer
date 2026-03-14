@@ -22,6 +22,7 @@ interface LanguageTexts {
   loveSongError: string;
   loveSongRepeat: string;
   loveSongRemove: string;
+  loveSongRemoveError: string;
   loveSongNoFound: string;
   getDataError: string;
   getDaraEmpty: string;
@@ -33,6 +34,7 @@ interface LanguageTexts {
   addSongToNext: string;
   removeSong: string;
   songLoadError?: string;
+  noSong?: string;
   songPlayError?: string;
   songLoadTest?: string;
   songNotDetails: string;
@@ -65,6 +67,7 @@ const languageData: LanguageData = {
     loveSongError: "喜欢音乐时发生错误",
     loveSongRepeat: "我喜欢的音乐中已存在该歌曲",
     loveSongRemove: "已从我喜欢的音乐中移除",
+    loveSongRemoveError: "从我喜欢的音乐中移除失败",
     loveSongNoFound: "我喜欢的列表中未找到该歌曲",
     getDataError: "数据获取失败，请刷新后重试",
     getDaraEmpty: "数据为空",
@@ -76,6 +79,7 @@ const languageData: LanguageData = {
     addSongToNext: "已添加至下一曲播放",
     removeSong: "已从播放列表中移除",
     songLoadError: "音乐数据获取失败",
+    noSong: "未找到歌曲",
     songPlayError: "歌曲播放失败",
     songLoadTest: "歌曲重试次数过多，请刷新后重试",
     songNotDetails: "歌曲详细信息获取失败，可尝试歌曲匹配",
@@ -98,6 +102,7 @@ const languageData: LanguageData = {
     loveSongError: "An error occurred while liking music",
     loveSongRepeat: "The song already exists in my favorite music",
     loveSongRemove: "Removed from my favorite music",
+    loveSongRemoveError: "Failed to remove from my favorite music",
     loveSongNoFound: "The song was not found in my favorite list",
     getDataError: "Data acquisition failed, please refresh and try again",
     getDaraEmpty: "Data is empty",
@@ -107,6 +112,7 @@ const languageData: LanguageData = {
     normal: "list loop",
     playError: "Playback error, please refresh and try again",
     addSongToNext: "has been added to the next song to play",
+    noSong: "No song was found",
     removeSong: "has been removed from the playlist",
     songNotDetails: "Song details failed to get, try song match",
   },
@@ -128,4 +134,4 @@ const getLanguageData = (type: keyof LanguageTexts): string | null => {
   }
 };
 
-export default getLanguageData; 
+export default getLanguageData;

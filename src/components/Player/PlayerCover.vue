@@ -3,19 +3,14 @@
     <Transition name="fade" mode="out-in">
       <div
         :key="`cover_pic--${music.getPlaySongData?.album?.pic ?? defaultCover}`"
-        :class="[
-          'pic',
-          !music.getPlayState ? 'pause' : '',
-          music.getLoadingState ? 'loading' : '',
-        ]"
+        :class="['pic', !music.getPlayState ? 'pause' : '', music.getLoadingState ? 'loading' : '']"
       >
         <img
           class="album"
           :src="
             music.getPlaySongData && music.getPlaySongData.album
-          ? music.getPlaySongData.album.picUrl.replace(/^http:/, 'https:') +
-          '?param=1024y1024'
-          : '/images/pic/default.png'
+              ? music.getPlaySongData.album.picUrl.replace(/^http:/, 'https:') + '?param=1024y1024'
+              : '/images/pic/default.png'
           "
           alt="cover"
         />
@@ -25,46 +20,58 @@
       <div class="song-info">
         <div class="text">
           <span class="name text-hidden">
-            {{
-              music.getPlaySongData
-                ? music.getPlaySongData.name
-                : $t("other.noSong")
-            }}
+            {{ music.getPlaySongData ? music.getPlaySongData.name : $t("other.noSong") }}
           </span>
-          <span
-            v-if="music.getPlaySongData"
-            class="artists text-hidden"
-            @click="
-              routerJump('/artist', {
-                id: music.getPlaySongData.artist[0].id,
-              })
-            "
-          >
-            {{ music.getPlaySongData.artist[0].name }}
+          <span v-if="music.getPlaySongData" class="artists text-hidden">
+            <span v-for="(ar, index) in music.getPlaySongData.artist" :key="ar.id">
+              <span class="artist-name" @click="routerJump('/artist', { id: ar.id })">{{
+                ar.name
+              }}</span>
+              <span v-if="index < music.getPlaySongData.artist.length - 1"> / </span>
+            </span>
           </span>
         </div>
-        <n-icon
-          v-if="music.getPlaySongData"
-          class="more-button"
-          :component="MoreHorizRound"
-        />
+        <div class="action-row">
+          <n-icon
+            class="like-button"
+            size="24"
+            :component="
+              music.getPlaySongData && music.getSongIsLike(music.getPlaySongData.id)
+                ? StarRound
+                : StarBorderRound
+            "
+            @click.stop="
+              music.getPlaySongData &&
+              (music.getSongIsLike(music.getPlaySongData.id)
+                ? music.changeLikeList(music.getPlaySongData.id, false)
+                : music.changeLikeList(music.getPlaySongData.id, true))
+            "
+          />
+          <n-dropdown
+            v-if="music.getPlaySongData && moreOptions.length"
+            :options="moreOptions"
+            trigger="click"
+            placement="bottom-end"
+            @select="handleMoreSelect"
+          >
+            <n-icon class="more-button" size="24" :component="MoreHorizRound" />
+          </n-dropdown>
+        </div>
       </div>
       <div class="progress-bar">
         <div class="slider-wrapper">
-          <vue-slider
-            v-model="music.getPlaySongTime.barMoveDistance"
-            @drag-start="music.setPlayState(false)"
-            @drag-end="sliderDragEnd"
-            @click.stop="
-              songTimeSliderUpdate(music.getPlaySongTime.barMoveDistance)
-            "
-            :tooltip="'none'"
+          <BouncingSlider
+            :value="music.getPlaySongTime.currentTime || 0"
+            :min="0"
+            :max="music.getPlaySongTime.duration || 1"
+            :is-playing="music.getPlayState"
+            @update:value="handleProgressSeek"
+            @seek-start="music.setPlayState(false)"
+            @seek-end="music.setPlayState(true)"
           />
         </div>
         <div class="time-info">
-          <span class="time-text">{{
-            music.getPlaySongTime.songTimePlayed
-          }}</span>
+          <span class="time-text">{{ music.getPlaySongTime.songTimePlayed }}</span>
           <div v-if="qualityText" class="quality-badge">
             <n-icon :component="IconLossless" />
             {{ qualityText }}
@@ -74,11 +81,7 @@
       </div>
       <div class="buttons">
         <n-icon
-          :style="
-            music.getPersonalFmMode
-          ? 'opacity: 0.2;pointer-events: none;'
-          : null
-          "
+          :style="music.getPersonalFmMode ? 'opacity: 0.2;pointer-events: none;' : null"
           class="button-icon"
           :class="{ active: music.getPlaySongMode !== 'normal' }"
           :component="playModeIcon"
@@ -112,28 +115,23 @@
           :component="IconForward"
           @click.stop="music.setPlaySongIndex('next')"
         />
-        <n-icon
-          class="button-icon"
-          :component="MessageRound"
-          @click="goToComment"
-        />
+        <n-icon class="button-icon" :component="MessageRound" @click="goToComment" />
       </div>
       <div class="volume-control">
-        <n-icon
-          class="button-icon"
-          :component="VolumeOffRound"
-        />
-        <vue-slider
-          :tooltip="'none'"
+        <BouncingSlider
+          :value="persistData.playVolume"
           :min="0"
           :max="1"
-          :interval="0.001"
-          v-model="persistData.playVolume"
-        />
-        <n-icon
-          class="button-icon"
-          :component="VolumeUpRound"
-        />
+          :change-on-drag="true"
+          @update:value="(val) => (persistData.playVolume = val)"
+        >
+          <template #before-icon>
+            <n-icon size="18" :component="VolumeOffRound" />
+          </template>
+          <template #after-icon>
+            <n-icon size="18" :component="VolumeUpRound" />
+          </template>
+        </BouncingSlider>
       </div>
     </div>
   </div>
@@ -143,11 +141,15 @@
 import {
   MoreHorizRound,
   ThumbDownRound,
+  StarBorderRound,
+  StarRound,
   VolumeOffRound,
   VolumeUpRound,
   MessageRound,
+  PictureInPictureAltRound,
+  SubtitlesRound,
 } from "@vicons/material";
-import { computed, onMounted } from "vue";
+import { computed, h, onMounted, ref } from "vue";
 import IconForward from "./icons/IconForward.vue";
 import IconRewind from "./icons/IconRewind.vue";
 import IconPlay from "./icons/IconPlay.vue";
@@ -157,17 +159,68 @@ import { ShuffleOne, PlayOnce, PlayCycle } from "@icon-park/vue-next";
 import { musicStore, userStore, settingStore } from "@/store";
 import { storeToRefs } from "pinia";
 import { useRouter } from "vue-router";
-import { setSeek } from "@/utils/Player";
-import VueSlider from "vue-slider-component";
-import "vue-slider-component/theme/default.css";
+import { setSeek } from "@/utils/AudioContext";
+import BouncingSlider from "./BouncingSlider.vue";
 import defaultCover from "/images/pic/default.png?url";
 import gsap from "gsap";
+import { NIcon } from "naive-ui";
+import { useI18n } from "vue-i18n";
+import { windowManager } from "@/utils/tauri/windowManager";
 
 const router = useRouter();
 const music = musicStore();
 const user = userStore();
 const setting = settingStore();
 const { persistData } = storeToRefs(music);
+const { t } = useI18n();
+const isTauriEnv = ref(typeof window !== "undefined" && "__TAURI__" in window);
+
+// MiniPlayer / DesktopLyrics 切换
+const toggleMiniPlayer = async () => {
+  const state = await windowManager.getWindowState("mini-player");
+  if (state?.exists) {
+    windowManager.toggleWindow("mini-player");
+  } else {
+    windowManager.createWindow("mini-player");
+  }
+};
+
+const toggleDesktopLyrics = async () => {
+  const state = await windowManager.getWindowState("desktop-lyrics");
+  if (state?.exists) {
+    if (state.visible) {
+      const tauri = window.__TAURI__;
+      if (tauri) await tauri.event.emit("desktop-lyrics-unlock");
+    } else {
+      windowManager.showWindow("desktop-lyrics");
+    }
+  } else {
+    windowManager.createWindow("desktop-lyrics");
+  }
+};
+
+// 更多菜单
+const renderIcon = (icon) => () => h(NIcon, { size: 18 }, { default: () => h(icon) });
+
+const moreOptions = computed(() => {
+  const options = [];
+  if (isTauriEnv.value) {
+    options.push(
+      {
+        label: t("setting.miniPlayer"),
+        key: "miniPlayer",
+        icon: renderIcon(PictureInPictureAltRound),
+      },
+      { label: t("setting.desktopLyrics"), key: "desktopLyrics", icon: renderIcon(SubtitlesRound) },
+    );
+  }
+  return options;
+});
+
+const handleMoreSelect = (key) => {
+  if (key === "miniPlayer") toggleMiniPlayer();
+  else if (key === "desktopLyrics") toggleDesktopLyrics();
+};
 
 // 音质标签
 const qualityText = computed(() => {
@@ -186,8 +239,7 @@ const qualityText = computed(() => {
 const remainingTime = computed(() => {
   const songTime = music.getPlaySongTime;
   if (!songTime?.duration) return "-0:00";
-  const currentSeconds = (songTime.duration / 100) * songTime.barMoveDistance;
-  const remainingSeconds = Math.max(0, songTime.duration - currentSeconds);
+  const remainingSeconds = Math.max(0, songTime.duration - (songTime.currentTime || 0));
   const minutes = Math.floor(remainingSeconds / 60);
   const seconds = Math.floor(remainingSeconds % 60);
   return `-${minutes}:${seconds.toString().padStart(2, "0")}`;
@@ -214,14 +266,10 @@ const cyclePlayMode = () => {
 };
 
 // 歌曲进度条更新
-const sliderDragEnd = () => {
-  songTimeSliderUpdate(music.getPlaySongTime.barMoveDistance);
-  music.setPlayState(true);
-};
-const songTimeSliderUpdate = (val) => {
+const handleProgressSeek = (val) => {
   if (typeof $player !== "undefined" && music.getPlaySongTime?.duration) {
-    const currentTime = (music.getPlaySongTime.duration / 100) * val;
-    setSeek($player, currentTime);
+    music.persistData.playSongTime.currentTime = val;
+    setSeek($player, val);
   }
 };
 
@@ -285,24 +333,25 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .player-cover-container {
+  --cover-size: min(50vh, 38vw);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2rem;
+
+  @media screen and (max-height: 768px) {
+    --cover-size: min(45vh, 38vw);
+    gap: 1.5rem;
+  }
+
   .pic {
     position: relative;
-    width: 50vh;
-    height: 50vh;
-    min-width: 250px;
-    min-height: 250px;
-    max-width: 360px;
-    max-height: 360px;
+    width: var(--cover-size);
+    height: var(--cover-size);
     border-radius: 12px;
-    transition: transform 0.5s ease-out, filter 0.5s ease-out;
-    @media (max-width: 870px) {
-      width: 40vh;
-      height: 40vh;
-    }
+    transition:
+      transform 0.5s ease-out,
+      filter 0.5s ease-out;
     &.pause {
       transform: scale(0.95);
     }
@@ -317,8 +366,7 @@ onMounted(() => {
     }
   }
   .controls {
-    width: 100%;
-    max-width: 360px;
+    width: var(--cover-size);
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
@@ -327,6 +375,7 @@ onMounted(() => {
       justify-content: space-between;
       align-items: center;
       color: var(--main-cover-color);
+
       .text {
         display: flex;
         flex-direction: column;
@@ -338,19 +387,33 @@ onMounted(() => {
         .artists {
           font-size: 1rem;
           opacity: 0.7;
-          cursor: pointer;
+          .artist-name {
+            cursor: pointer;
             &:hover {
-            opacity: 1;
+              opacity: 1;
+            }
           }
         }
       }
-      .more-button {
-        font-size: 1.75rem;
-        cursor: pointer;
-        opacity: 0.7;
-        transition: opacity 0.2s ease;
-        &:hover {
-          opacity: 1;
+      .action-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        .like-button {
+          font-size: 1.75rem;
+          cursor: pointer;
+          opacity: 0.7;
+          transition: opacity 0.2s ease;
+        }
+
+        .more-button {
+          font-size: 1.75rem;
+          cursor: pointer;
+          opacity: 0.7;
+          transition: opacity 0.2s ease;
+          &:hover {
+            opacity: 1;
+          }
         }
       }
     }
@@ -408,7 +471,9 @@ onMounted(() => {
         color: var(--main-cover-color);
         opacity: 0.8;
         cursor: pointer;
-        transition: opacity 0.2s ease, transform 0.1s ease-out;
+        transition:
+          opacity 0.2s ease,
+          transform 0.1s ease-out;
         &:hover {
           opacity: 1;
         }
@@ -421,34 +486,10 @@ onMounted(() => {
     .volume-control {
       display: flex;
       align-items: center;
-      gap: 1rem;
-      .button-icon {
-        font-size: 1.25rem;
+
+      :deep(.n-icon) {
         color: var(--main-cover-color);
         opacity: 0.7;
-      }
-    }
-    .vue-slider {
-      width: 100% !important;
-      cursor: pointer;
-      :deep(.vue-slider-rail) {
-        height: 5px;
-        background-color: rgba(255, 255, 255, 0.2);
-        border-radius: 2.5px;
-        .vue-slider-process {
-          background-color: var(--main-cover-color);
-        }
-      }
-      :deep(.vue-slider-dot) {
-        opacity: 0;
-        transition: opacity 0.2s ease;
-        .vue-slider-dot-handle {
-          background-color: var(--main-cover-color);
-          box-shadow: none;
-        }
-      }
-      &:hover :deep(.vue-slider-dot) {
-        opacity: 1;
       }
     }
   }
