@@ -34,7 +34,7 @@ export const song = {
    */
   getUnmUrl: async (id: number) => {
     const server = "qq,pyncmd";
-    const url = `${import.meta.env.VITE_UNM_API}match?id=${id}&server=${server}`;
+    const url = `${import.meta.env.VITE_UNM_API}match?id=${id}`;
     const response = await fetch(url, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
