@@ -422,8 +422,8 @@ const songTimeSliderUpdate = (val) => {
   if (player.value && music.getPlaySongTime?.duration) {
     const currentTime = (music.getPlaySongTime.duration / 100) * val;
     setSeek(player.value, currentTime);
-    // 一起听歌：房主发送进度跳转命令
-    if (listenTogether.isHost) {
+    // 一起听歌：发送进度跳转命令（房主和房客均可）
+    if (listenTogether.isInRoom) {
       listenTogether.sendPlayCommand("seek", Math.floor(currentTime * 1000));
     }
   }
@@ -821,11 +821,13 @@ watch(
       songChange(val);
       broadcastPlayerState();
 
-      // 一起听歌：房主发送切歌命令
-      if (listenTogether.isHost && val?.id && !listenTogether.isProcessingRemoteCommand) {
+      // 一起听歌：发送切歌命令（房主和房客均可）
+      if (listenTogether.isInRoom && val?.id && !listenTogether.isProcessingRemoteCommand) {
         listenTogether.sendPlayCommand("GOTO");
-        // 同步播放列表
-        listenTogether.syncCurrentPlaylist();
+        // 仅房主同步播放列表
+        if (listenTogether.isHost) {
+          listenTogether.syncCurrentPlaylist();
+        }
       }
 
       // Update tray tooltip with current song info
@@ -871,8 +873,8 @@ watch(
         lyricIndex: music.playSongLyricIndex,
       });
     }
-    // 一起听歌：房主发送播放状态同步
-    if (listenTogether.isHost && !listenTogether.isProcessingRemoteCommand) {
+    // 一起听歌：发送播放状态同步（房主和房客均可）
+    if (listenTogether.isInRoom && !listenTogether.isProcessingRemoteCommand) {
       listenTogether.sendPlayCommand(val ? "PLAY" : "PAUSE");
     }
     nextTick().then(() => {
@@ -1022,8 +1024,23 @@ const fetchAndParseLyric = async (id) => {
   height: 70px;
   position: fixed;
   bottom: 0;
-  left: 0;
+  left: var(--sidebar-width, 240px);
+  width: calc(100% - var(--sidebar-width, 240px));
   z-index: 2;
+  transition: left 0.3s ease, width 0.3s ease;
+
+  // Acrylic background — override Naive UI card bg
+  background-color: var(--acrylic-bg, rgba(255, 255, 255, 0.45)) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-top: 1px solid var(--acrylic-border, rgba(0, 0, 0, 0.04));
+
+  // Mobile: player sits above tab bar, no sidebar
+  @media (max-width: 768px) {
+    bottom: 56px;
+    left: 0;
+    width: 100%;
+  }
 
   .slider {
     position: absolute;
